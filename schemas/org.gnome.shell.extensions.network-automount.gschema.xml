@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.network-automount" path="/org/gnome/shell/extensions/network-automount/">
+    <key name="check-interval" type="i">
+      <default>5</default>
+      <summary>Check interval in minutes</summary>
+      <description>How often to check and remount network locations</description>
+    </key>
+    <key name="show-notifications" type="b">
+      <default>true</default>
+      <summary>Show notifications</summary>
+      <description>Display notifications for mount/unmount events</description>
+    </key>
+    <key name="show-success-notifications" type="b">
+      <default>false</default>
+      <summary>Show success notifications</summary>
+      <description>Display notifications for successful mounts</description>
+    </key>
+    <key name="show-error-notifications" type="b">
+      <default>true</default>
+      <summary>Show error notifications</summary>
+      <description>Display notifications for mount errors</description>
+    </key>
+    <key name="custom-mount-base" type="s">
+      <default>''</default>
+      <summary>Custom mount base directory</summary>
+      <description>Base directory for custom mount points (empty = use system default)</description>
+    </key>
+    <key name="bookmark-settings" type="s">
+      <default>'{}'</default>
+      <summary>Bookmark-specific settings</summary>
+      <description>JSON string containing per-bookmark configuration</description>
+    </key>
+    <key name="retry-attempts" type="i">
+      <default>3</default>
+      <summary>Retry attempts</summary>
+      <description>Number of times to retry failed mounts</description>
+    </key>
+    <key name="retry-delay" type="i">
+      <default>30</default>
+      <summary>Retry delay in seconds</summary>
+      <description>Delay between retry attempts</description>
+    </key>
+  </schema>
+</schemalist>
