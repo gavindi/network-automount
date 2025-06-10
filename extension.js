@@ -309,10 +309,10 @@ class NetworkMountIndicator extends PanelMenu.Button {
     
     _updateItemLabel(item, bookmark) {
         let isMounted = this._isLocationMounted(bookmark.uri);
-        let statusSymbol = isMounted ? '\U0001f7e2' : '\u26aa';
+        let statusSymbol = isMounted ? '\u{1f7e2}' : '\u26aa';
         
         if (bookmark.failCount > 0) {
-            statusSymbol = '\U0001f7e1';
+            statusSymbol = '\u{1f7e1}';
         }
         
         // Update the label to include status
