@@ -36,7 +36,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
         this._setupNotificationSource();
         
         // Mount all enabled bookmarks on startup
-        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
+        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
             this._checkAndMountAll();
             return GLib.SOURCE_REMOVE;
         });
