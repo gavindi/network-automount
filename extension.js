@@ -97,7 +97,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         
         // Controls
-        let configItem = new PopupMenu.PopupMenuItem(_('Settings...'));
+        let configItem = new PopupMenu.PopupMenuItem(_('Settings'));
         configItem.connect('activate', () => {
             this._openSettings();
         });
@@ -121,7 +121,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
         });
         this.menu.addMenuItem(unmountAllItem);
     }
-    
+
     _updateStatus() {
         let enabled = this._bookmarks.filter(b => b.enabled).length;
         let mounted = this._bookmarks.filter(b => b.enabled && this._isLocationMounted(b.uri)).length;
@@ -460,7 +460,8 @@ class NetworkMountIndicator extends PanelMenu.Button {
     _checkAndMountAll(manual = false) {
         let mounted = 0;
         let total = 0;
-        
+        this._loadBookmarks();
+        this._updateStatus();
         this._bookmarks
             .filter(bookmark => bookmark.enabled)
             .forEach(bookmark => {

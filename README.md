@@ -1,5 +1,5 @@
 # Network Auto Mount
-![screenshot](https://github.com/gavindi/network-automount/raw/master/media/NetworkautomountScreenshot.jpg)
+![screenshot](https://github.com/gavindi/network-automount/blob/master/media/NetworkautomountScreenshot.png)
 
 ## Mount your bookmarked network shares
 This extension will mount your bookmarked network shares and periodically check them should they become unmounted for any reason.  It has options to control (re)mount frequency.
