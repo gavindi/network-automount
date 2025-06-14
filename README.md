@@ -4,6 +4,8 @@
 ## Mount your bookmarked network shares
 This extension will mount your bookmarked network shares and periodically check them should they become unmounted for any reason.  It has options to control (re)mount frequency.
 
+I was inspired by [Gigolo](https://docs.xfce.org/apps/gigolo/start) but sometimes crashes and also doesn't display a MessageTray icon under Wayland sessions.  Also, I thought "why does this need to be an app?".  So, I vibed with Claude to create this.
+
 ## Installation from source
 
 The extension can be installed directly from source, either for the convenience of using git or to test the latest development version. Clone the desired branch with git
