@@ -18,11 +18,47 @@ This extension has no special build dependancies.
 
 Clone the repository or download the branch from github. A simple Makefile is included.
 
-Next use `make` to install the extension into your home directory. A Shell reload is required `Alt+F2 r Enter` under Xorg or under Wayland you may have to logout and login. The extension has to be enabled  with *gnome-extensions-app* (GNOME Extensions) or with *dconf*.
-
 ```bash
 git clone https://github.com/gavindi/network-automount
 make -C network-automount install
+```
+#### Key Features
+##### Build Process
+
+Compiles GSettings schemas (required for preferences)
+Copies all necessary files to a build directory
+Creates proper directory structure
+
+##### Installation Options
+
+```bash
+make install - Install to user directory (recommended)
+make install-system - System-wide installation (requires sudo)
+```
+##### Development Workflow
+
+```bash
+make dev - One command to clean, install, and enable
+make status - Check if extension is installed/enabled
+make restart-shell - Restart GNOME Shell on X11
+```
+##### Distribution
+
+```bash
+make dist - Creates a zip file for sharing/publishing
+```
+
+##### Quick Usage
+
+```bash
+# Build and install the extension
+make install
+
+# Enable it
+make enable
+
+# Or do everything at once for development
+make dev
 ```
 
 ## Bug Reporting
