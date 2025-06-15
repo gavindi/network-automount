@@ -7,6 +7,7 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 export default class NetworkAutoMountPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         this._settings = this.getSettings();
+        this._window = window; // Store reference to the window
         
         // General Settings Page
         const generalPage = new Adw.PreferencesPage({
@@ -127,7 +128,8 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         // Add browse button
         const browseButton = new Gtk.Button({
             icon_name: 'folder-open-symbolic',
-            valign: Gtk.Align.CENTER
+            valign: Gtk.Align.CENTER,
+            tooltip_text: _('Browse for directory')
         });
         
         browseButton.connect('clicked', () => {
@@ -143,6 +145,13 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
             subtitle: _('If empty, system will choose mount points automatically')
         });
         group.add(infoRow);
+        
+        // Example row
+        const exampleRow = new Adw.ActionRow({
+            title: _('Example'),
+            subtitle: _('~/mounts or /media/mounts')
+        });
+        group.add(exampleRow);
         
         page.add(group);
     }
@@ -218,6 +227,25 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         
         logRow.add_suffix(logButton);
         debugGroup.add(logRow);
+        
+        // Reset settings button
+        const resetRow = new Adw.ActionRow({
+            title: _('Reset Settings'),
+            subtitle: _('Reset all settings to default values')
+        });
+        
+        const resetButton = new Gtk.Button({
+            label: _('Reset'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['destructive-action']
+        });
+        
+        resetButton.connect('clicked', () => {
+            this._resetSettings();
+        });
+        
+        resetRow.add_suffix(resetButton);
+        debugGroup.add(resetRow);
         page.add(debugGroup);
     }
     
@@ -226,22 +254,74 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
             title: _('Choose Mount Base Directory'),
             action: Gtk.FileChooserAction.SELECT_FOLDER,
             modal: true,
-            transient_for: this.get_root()
+            transient_for: this._window // Use the stored window reference
         });
         
         dialog.add_button(_('Cancel'), Gtk.ResponseType.CANCEL);
         dialog.add_button(_('Select'), Gtk.ResponseType.ACCEPT);
+        
+        // Set initial directory to current value or home directory
+        const currentPath = entry.get_text();
+        if (currentPath) {
+            try {
+                const currentFile = Gio.File.new_for_path(currentPath);
+                if (currentFile.query_exists(null)) {
+                    dialog.set_current_folder(currentFile);
+                }
+            } catch (e) {
+                // If current path is invalid, fall back to home directory
+                dialog.set_current_folder(Gio.File.new_for_path(GLib.get_home_dir()));
+            }
+        } else {
+            dialog.set_current_folder(Gio.File.new_for_path(GLib.get_home_dir()));
+        }
         
         dialog.connect('response', (dialog, response) => {
             if (response === Gtk.ResponseType.ACCEPT) {
                 const file = dialog.get_file();
                 if (file) {
                     entry.set_text(file.get_path());
+                    // Trigger the notify signal to save the setting
+                    entry.notify('text');
                 }
             }
             dialog.destroy();
         });
         
-        dialog.show();
+        dialog.present();
+    }
+    
+    _resetSettings() {
+        // Create a confirmation dialog
+        const dialog = new Adw.MessageDialog({
+            heading: _('Reset Settings?'),
+            body: _('This will reset all extension settings to their default values. This action cannot be undone.'),
+            modal: true,
+            transient_for: this._window
+        });
+        
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('reset', _('Reset'));
+        dialog.set_response_appearance('reset', Adw.ResponseAppearance.DESTRUCTIVE);
+        
+        dialog.connect('response', (dialog, response) => {
+            if (response === 'reset') {
+                // Reset all settings to default
+                this._settings.reset('check-interval');
+                this._settings.reset('show-notifications');
+                this._settings.reset('show-success-notifications');
+                this._settings.reset('show-error-notifications');
+                this._settings.reset('custom-mount-base');
+                this._settings.reset('bookmark-settings');
+                this._settings.reset('retry-attempts');
+                this._settings.reset('retry-delay');
+                
+                // Close preferences window to force refresh
+                this._window.close();
+            }
+            dialog.destroy();
+        });
+        
+        dialog.present();
     }
 }
