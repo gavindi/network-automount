@@ -524,7 +524,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     
     _openSettings() {
         try {
-            GLib.spawn_command_line_async('gnome-extensions prefs network-automount@example.com');
+            GLib.spawn_command_line_async('gnome-extensions prefs network-automount@gavindi.github.com');
         } catch (e) {
             this._notify(_('Settings'), _('Could not open preferences'), true);
         }
