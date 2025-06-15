@@ -14,7 +14,7 @@ The extension can be installed directly from source, either for the convenience 
 
 This extension has no special build dependancies.
 
-### Building
+### Quick Install
 
 Clone the repository or download the branch from github. A simple Makefile is included.
 
@@ -22,7 +22,7 @@ Clone the repository or download the branch from github. A simple Makefile is in
 git clone https://github.com/gavindi/network-automount
 make -C network-automount install
 ```
-#### Key Features
+
 ##### Build Process
 
 Compiles GSettings schemas (required for preferences)
@@ -32,15 +32,23 @@ Creates proper directory structure
 ##### Installation Options
 
 ```bash
-make install - Install to user directory (recommended)
-make install-system - System-wide installation (requires sudo)
+# Install to user directory (recommended)
+make install
+
+# System-wide installation (requires sudo)
+make install-system
 ```
 ##### Development Workflow
 
 ```bash
-make dev - One command to clean, install, and enable
-make status - Check if extension is installed/enabled
-make restart-shell - Restart GNOME Shell on X11
+# One command to clean, install, and enable
+make dev
+
+# Check if extension is installed/enabled
+make status
+
+# Restart GNOME Shell on X11
+make restart-shell
 ```
 ##### Distribution
 
@@ -66,5 +74,4 @@ make dev
 Bugs should be reported to the Github bug tracker [https://github.com/gavindi/network-automount/issues](https://github.com/gavindi/network-automount/issues).
 
 ## License
-Network Automount Gnome Shell extension is distributed under the terms of the GNU General Public License,
-version 2 or later. See the COPYING file for details.
+Network Automount Gnome Shell extension is distributed under the terms of the GNU General Public License, version 2 or later. See the COPYING file for details.
