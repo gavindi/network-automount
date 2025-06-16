@@ -25,6 +25,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
         
         this._bookmarks = [];
         this._mountedLocations = new Map();
+        this._symlinkPaths = new Map(); // Track symlinks for cleanup
         this._retryQueue = new Map();
         this._timeoutId = null;
         this._source = null;
@@ -284,8 +285,6 @@ class NetworkMountIndicator extends PanelMenu.Button {
         return item;
     }
     
-
-    
     _updateCompleteItemLabel(item, bookmark) {
         let isMounted = this._isLocationMounted(bookmark.uri);
         let statusSymbol = isMounted ? '\u{1f7e2}' : '\u26aa';
@@ -297,16 +296,12 @@ class NetworkMountIndicator extends PanelMenu.Button {
         // Build complete status info
         let statusParts = [bookmark.name];
         
-        // Add mount status
+        // Add mount status and symlink path
         if (isMounted) {
-            statusParts.push('(Mounted)');
+            let symlinkPath = this._getSymlinkPath(bookmark);
+            statusParts.push(`(Mounted → ${symlinkPath})`);
         } else if (bookmark.failCount > 0) {
             statusParts.push(`(Failed ${bookmark.failCount}x)`);
-        }
-        
-        // Add custom mount point
-        if (bookmark.customMountPoint) {
-            statusParts.push(`@ ${bookmark.customMountPoint}`);
         }
         
         // Combine everything into one line
@@ -324,17 +319,114 @@ class NetworkMountIndicator extends PanelMenu.Button {
         }
     }
     
-    _getCustomMountPoint(bookmark) {
-        if (!bookmark.customMountPoint) return null;
-        
+    _getGvfsMountPath(uri) {
+        try {
+            let file = Gio.File.new_for_uri(uri);
+            let mount = file.find_enclosing_mount(null);
+            if (mount) {
+                let root = mount.get_root();
+                return root.get_path();
+            }
+        } catch (e) {
+            console.error('Error getting GVFS mount path:', e);
+        }
+        return null;
+    }
+    
+    _getSymlinkPath(bookmark) {
         let basePath = this._settings.get_string('custom-mount-base');
-        if (!basePath) basePath = GLib.get_home_dir() + '/mounts';
+        if (!basePath) {
+            basePath = GLib.get_home_dir() + '/NetworkMounts';
+        }
         
-        return `${basePath}/${bookmark.customMountPoint}`;
+        // Use custom mount point name if specified, otherwise use sanitized bookmark name
+        let linkName = bookmark.customMountPoint || this._sanitizeForFilename(bookmark.name);
+        return `${basePath}/${linkName}`;
+    }
+    
+    _sanitizeForFilename(name) {
+        // Replace problematic characters with safe alternatives
+        return name.replace(/[<>:"\/\\|?*]/g, '_')
+                  .replace(/\s+/g, '_')
+                  .replace(/_+/g, '_')
+                  .replace(/^_|_$/g, '');
+    }
+    
+    _createSymlink(bookmark) {
+        try {
+            let gvfsPath = this._getGvfsMountPath(bookmark.uri);
+            if (!gvfsPath) {
+                console.error('Could not get GVFS mount path for:', bookmark.name);
+                return false;
+            }
+            
+            let symlinkPath = this._getSymlinkPath(bookmark);
+            let symlinkDir = GLib.path_get_dirname(symlinkPath);
+            
+            // Create base directory if it doesn't exist
+            let baseDir = Gio.File.new_for_path(symlinkDir);
+            try {
+                baseDir.make_directory_with_parents(null);
+            } catch (e) {
+                // Directory might already exist
+                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS)) {
+                    console.error('Failed to create symlink directory:', e);
+                    return false;
+                }
+            }
+            
+            // Remove existing symlink if present
+            this._removeSymlink(bookmark);
+            
+            // Create the symbolic link
+            let symlinkFile = Gio.File.new_for_path(symlinkPath);
+            try {
+                symlinkFile.make_symbolic_link(gvfsPath, null);
+                this._symlinkPaths.set(bookmark.uri, symlinkPath);
+                console.log(`Created symlink: ${symlinkPath} → ${gvfsPath}`);
+                return true;
+            } catch (e) {
+                console.error(`Failed to create symlink for ${bookmark.name}:`, e);
+                return false;
+            }
+            
+        } catch (e) {
+            console.error('Error creating symlink:', e);
+            return false;
+        }
+    }
+    
+    _removeSymlink(bookmark) {
+        try {
+            let symlinkPath = this._symlinkPaths.get(bookmark.uri);
+            if (!symlinkPath) {
+                // Try to get the path even if not tracked
+                symlinkPath = this._getSymlinkPath(bookmark);
+            }
+            
+            let symlinkFile = Gio.File.new_for_path(symlinkPath);
+            if (symlinkFile.query_exists(null)) {
+                // Check if it's actually a symlink before removing
+                let info = symlinkFile.query_info('standard::is-symlink', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
+                if (info && info.get_is_symlink()) {
+                    symlinkFile.delete(null);
+                    console.log(`Removed symlink: ${symlinkPath}`);
+                }
+            }
+            
+            this._symlinkPaths.delete(bookmark.uri);
+            return true;
+            
+        } catch (e) {
+            console.error('Error removing symlink:', e);
+            return false;
+        }
     }
     
     _mountLocation(bookmark, isRetry = false, isStartup = false) {
         if (this._isLocationMounted(bookmark.uri)) {
+            // Even if already mounted, ensure symlink exists
+            this._createSymlink(bookmark);
             if (!isRetry && !isStartup) this._notify(_('Already Mounted'), bookmark.name);
             return;
         }
@@ -342,18 +434,6 @@ class NetworkMountIndicator extends PanelMenu.Button {
         try {
             let file = Gio.File.new_for_uri(bookmark.uri);
             let mountOp = new Gio.MountOperation();
-            
-            // Set custom mount point if specified
-            let customMount = this._getCustomMountPoint(bookmark);
-            if (customMount) {
-                // Ensure mount directory exists
-                let mountDir = Gio.File.new_for_path(customMount);
-                try {
-                    mountDir.make_directory_with_parents(null);
-                } catch (e) {
-                    // Directory might already exist
-                }
-            }
             
             file.mount_enclosing_volume(
                 Gio.MountMountFlags.NONE,
@@ -368,13 +448,23 @@ class NetworkMountIndicator extends PanelMenu.Button {
                         bookmark.lastAttempt = Date.now();
                         this._mountedLocations.set(bookmark.uri, Date.now());
                         
-                        if (!isStartup) {
-                            this._notify(_('Mounted Successfully'), bookmark.name);
-                        }
-                        
-                        // Always update the menu after successful mount
-                        this._updateBookmarksList();
-                        this._updateStatus();
+                        // Create symlink after successful mount
+                        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+                            let symlinkCreated = this._createSymlink(bookmark);
+                            
+                            if (!isStartup) {
+                                let message = symlinkCreated ? 
+                                    `${bookmark.name} → ${this._getSymlinkPath(bookmark)}` : 
+                                    bookmark.name;
+                                this._notify(_('Mounted Successfully'), message);
+                            }
+                            
+                            // Always update the menu after successful mount and symlink creation
+                            this._updateBookmarksList();
+                            this._updateStatus();
+                            
+                            return GLib.SOURCE_REMOVE;
+                        });
                         
                     } catch (e) {
                         console.error(`Failed to mount ${bookmark.name}:`, e);
@@ -429,6 +519,9 @@ class NetworkMountIndicator extends PanelMenu.Button {
             let mount = file.find_enclosing_mount(null);
             
             if (mount) {
+                // Remove symlink before unmounting
+                this._removeSymlink(bookmark);
+                
                 mount.unmount_with_operation(
                     Gio.MountUnmountFlags.NONE,
                     null,
@@ -452,6 +545,8 @@ class NetworkMountIndicator extends PanelMenu.Button {
                     }
                 );
             } else {
+                // If not mounted, still try to clean up any stale symlinks
+                this._removeSymlink(bookmark);
                 this._notify(_('Not Mounted'), bookmark.name);
             }
         } catch (e) {
@@ -470,6 +565,8 @@ class NetworkMountIndicator extends PanelMenu.Button {
                 total++;
                 if (this._isLocationMounted(bookmark.uri)) {
                     mounted++;
+                    // Ensure symlink exists for already mounted locations
+                    this._createSymlink(bookmark);
                 } else {
                     this._mountLocation(bookmark, false, isStartup);
                 }
@@ -530,11 +627,23 @@ class NetworkMountIndicator extends PanelMenu.Button {
         }
     }
     
+    _cleanupAllSymlinks() {
+        // Clean up all tracked symlinks
+        this._bookmarks.forEach(bookmark => {
+            this._removeSymlink(bookmark);
+        });
+        this._symlinkPaths.clear();
+    }
+    
     destroy() {
         if (this._timeoutId) {
             GLib.source_remove(this._timeoutId);
             this._timeoutId = null;
         }
+        
+        // Clean up all symlinks when extension is disabled
+        this._cleanupAllSymlinks();
+        
         if (this._source) {
             this._source.destroy();
         }

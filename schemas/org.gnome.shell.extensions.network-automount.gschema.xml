@@ -41,5 +41,10 @@
       <summary>Retry delay in seconds</summary>
       <description>Delay between retry attempts</description>
     </key>
+    <key name="symlink-mounts" type="b">
+      <default>false</default>
+      <summary>Create symbolic links for mounts</summary>
+      <description>Create symbolic links in a custom directory pointing to mounted locations</description>
+    </key>
   </schema>
 </schemalist>

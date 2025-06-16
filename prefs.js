@@ -139,6 +139,15 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         mountBaseRow.add_suffix(browseButton);
         group.add(mountBaseRow);
         
+        // Symbolic links option
+        const symlinkRow = new Adw.SwitchRow({
+            title: _('Create Symbolic Links'),
+            subtitle: _('Create symbolic links for mounted locations in the base directory')
+        });
+        
+        this._settings.bind('symlink-mounts', symlinkRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        group.add(symlinkRow);
+        
         // Info about default behavior
         const infoRow = new Adw.ActionRow({
             title: _('Default Behavior'),
@@ -315,6 +324,7 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
                 this._settings.reset('bookmark-settings');
                 this._settings.reset('retry-attempts');
                 this._settings.reset('retry-delay');
+                this._settings.reset('symlink-mounts');
                 
                 // Close preferences window to force refresh
                 this._window.close();
