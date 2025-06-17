@@ -25,19 +25,17 @@ SCHEMA_FILES = \
 all: build
 
 # Build the extension (compile schemas)
-build: $(BUILD_DIR)
+build:
+    # Create build directory
+    mkdir -p $(BUILD_DIR)
 	@echo "Building extension..."
-	# Copy extension files
+    # Copy extension files
 	cp $(EXTENSION_FILES) $(BUILD_DIR)/
-	# Copy and compile schema
-	mkdir -p $(BUILD_DIR)/schemas
+    # Copy and compile schema
+    mkdir -p $(BUILD_DIR)/schemas
 	cp $(SCHEMA_FILES) $(BUILD_DIR)/schemas/
 	glib-compile-schemas $(BUILD_DIR)/schemas/
 	@echo "Build complete!"
-
-# Create build directory
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
 
 # Install extension to user directory
 install:
