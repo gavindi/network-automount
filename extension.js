@@ -147,12 +147,12 @@ class NetworkMountIndicator extends PanelMenu.Button {
             this._icon.icon_name = 'folder-remote-symbolic'; // All good
             this._icon.add_style_class_name('success');
         } else if (mounted > 0) {
-            this._icon.icon_name = 'folder-visiting-symbolic'; // Partial
+            this._icon.icon_name = 'dialog-warning-symbolic'; // Partial
         } else {
-            this._icon.icon_name = 'folder-visting-symbolic'; // None mounted
+            this._icon.icon_name = 'dialog-error-symbolic'; // None mounted
         }
     }
-
+    
     _loadBookmarks() {
         try {
             let bookmarksFile = Gio.File.new_for_path(
@@ -257,6 +257,11 @@ class NetworkMountIndicator extends PanelMenu.Button {
         }
         
         this._bookmarks.forEach((bookmark, index) => {
+            // Check and update symlinks only for bookmarks with symlink enabled
+            if (this._isLocationMounted(bookmark.uri) && (bookmark.createSymlink || bookmark.customMountPoint)) {
+                this._createSymlink(bookmark);
+            }
+            
             // Single line with everything combined
             let item = this._createBookmarkItem(bookmark, index);
             this._bookmarksSection.addMenuItem(item);
@@ -586,18 +591,27 @@ class NetworkMountIndicator extends PanelMenu.Button {
         let total = 0;
         this._loadBookmarks();
         this._updateStatus();
-        this._bookmarks
-            .filter(bookmark => bookmark.enabled)
-            .forEach(bookmark => {
+        
+        // Process ALL bookmarks for symlink management, but only mount enabled ones
+        this._bookmarks.forEach(bookmark => {
+            if (bookmark.enabled) {
                 total++;
                 if (this._isLocationMounted(bookmark.uri)) {
                     mounted++;
-                    // Ensure symlink exists for already mounted locations (if requested)
-                    this._createSymlink(bookmark);
+                    // Ensure symlink exists for already mounted locations (if symlink is enabled)
+                    if (bookmark.createSymlink || bookmark.customMountPoint) {
+                        this._createSymlink(bookmark);
+                    }
                 } else {
                     this._mountLocation(bookmark, false, isStartup);
                 }
-            });
+            } else {
+                // Even if auto-mount is disabled, check if already mounted and create/update symlink if enabled
+                if (this._isLocationMounted(bookmark.uri) && (bookmark.createSymlink || bookmark.customMountPoint)) {
+                    this._createSymlink(bookmark);
+                }
+            }
+        });
             
         if (manual) {
             this._notify(_('Mount Check'), _(`Checking ${total} locations, ${mounted} already mounted`));
@@ -655,7 +669,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     }
     
     _cleanupAllSymlinks() {
-        // Clean up all tracked symlinks
+        // Clean up all tracked symlinks for ALL bookmarks (not just enabled ones)
         this._bookmarks.forEach(bookmark => {
             if (bookmark.createSymlink || bookmark.customMountPoint) {
                 this._removeSymlink(bookmark);

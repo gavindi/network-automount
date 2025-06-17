@@ -219,7 +219,7 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
     _addMountSettings(page) {
         const group = new Adw.PreferencesGroup({
             title: _('Custom Mount Points'),
-            description: _('Configure where network locations are mounted')
+            description: _('Configure symlink base directory - symlinks work for all mounted locations regardless of auto-mount setting')
         });
         
         // Custom mount base directory
@@ -301,7 +301,7 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
             // Create symlink option
             const symlinkRow = new Adw.SwitchRow({
                 title: _('Create Symlink'),
-                subtitle: _('Create a symbolic link in the base directory when mounted')
+                subtitle: _('Create a symbolic link when mounted (works independently of auto-mount)')
             });
             
             symlinkRow.set_active(bookmark.createSymlink);
