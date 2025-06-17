@@ -147,12 +147,12 @@ class NetworkMountIndicator extends PanelMenu.Button {
             this._icon.icon_name = 'folder-remote-symbolic'; // All good
             this._icon.add_style_class_name('success');
         } else if (mounted > 0) {
-            this._icon.icon_name = 'dialog-warning-symbolic'; // Partial
+            this._icon.icon_name = 'folder-visiting-symbolic'; // Partial
         } else {
-            this._icon.icon_name = 'dialog-error-symbolic'; // None mounted
+            this._icon.icon_name = 'folder-visting-symbolic'; // None mounted
         }
     }
-    
+
     _loadBookmarks() {
         try {
             let bookmarksFile = Gio.File.new_for_path(
