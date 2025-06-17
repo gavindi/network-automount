@@ -40,18 +40,18 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 # Install extension to user directory
-install: build
-	@echo "Installing extension to $(INSTALL_DIR)..."
-	# Remove existing installation
-	rm -rf $(INSTALL_DIR)
-	# Create installation directory
-	mkdir -p $(INSTALL_DIR)
-	# Copy all built files
-	cp -r $(BUILD_DIR)/* $(INSTALL_DIR)/
-	# Install schema to local schemas directory
-	mkdir -p $(LOCAL_SCHEMAS_DIR)
-	cp $(SCHEMA_FILES) $(LOCAL_SCHEMAS_DIR)/
-	glib-compile-schemas $(LOCAL_SCHEMAS_DIR)/
+install:
+    @echo "Installing extension to $(INSTALL_DIR)..."
+    # Remove existing installation
+    rm -rf $(INSTALL_DIR)
+    # Create installation directory
+    mkdir -p $(INSTALL_DIR)
+    # Copy all built files
+    cp -r $(EXTENSION_FILES) $(INSTALL_DIR)/
+    # Install schema to local schemas directory
+    mkdir -p $(INSTALL_DIR)/schemas
+    cp $(SCHEMA_FILES) $(INSTALL_DIR)/schemas/
+    glib-compile-schemas $(INSTALL_DIR)/schemas/
 	@echo ""
 	@echo "Extension installed successfully!"
 	@echo "Please restart GNOME Shell:"
@@ -76,9 +76,6 @@ uninstall:
 	-gnome-extensions disable $(UUID)
 	# Remove extension directory
 	rm -rf $(INSTALL_DIR)
-	# Remove schema
-	rm -f $(LOCAL_SCHEMAS_DIR)/org.gnome.shell.extensions.network-automount.gschema.xml
-	glib-compile-schemas $(LOCAL_SCHEMAS_DIR)/ 2>/dev/null || true
 	@echo "Extension uninstalled!"
 
 # Uninstall system-wide installation
