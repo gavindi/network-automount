@@ -8,6 +8,10 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         this._settings = this.getSettings();
         this._window = window; // Store reference to the window
+        this._bookmarks = [];
+        
+        // Load bookmarks for configuration
+        this._loadBookmarks();
         
         // General Settings Page
         const generalPage = new Adw.PreferencesPage({
@@ -36,6 +40,15 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         this._addMountSettings(mountsPage);
         window.add(mountsPage);
         
+        // Bookmarks Configuration Page
+        const bookmarksPage = new Adw.PreferencesPage({
+            title: _('Bookmarks'),
+            icon_name: 'user-bookmarks-symbolic'
+        });
+        
+        this._addBookmarkSettings(bookmarksPage);
+        window.add(bookmarksPage);
+        
         // Advanced Page
         const advancedPage = new Adw.PreferencesPage({
             title: _('Advanced'),
@@ -44,6 +57,100 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         
         this._addAdvancedSettings(advancedPage);
         window.add(advancedPage);
+    }
+    
+    _loadBookmarks() {
+        try {
+            let bookmarksFile = Gio.File.new_for_path(
+                GLib.get_home_dir() + '/.config/gtk-3.0/bookmarks'
+            );
+            
+            if (!bookmarksFile.query_exists(null)) {
+                this._bookmarks = [];
+                return;
+            }
+            
+            let [success, contents] = bookmarksFile.load_contents(null);
+            if (!success) return;
+            
+            let bookmarkLines = new TextDecoder().decode(contents).split('\n');
+            this._bookmarks = bookmarkLines
+                .filter(line => line.trim() && line.includes('://') && !line.startsWith('file://'))
+                .map(line => {
+                    let [uri, ...nameParts] = line.trim().split(' ');
+                    let name = nameParts.join(' ') || this._extractNameFromUri(uri);
+                    return { 
+                        uri, 
+                        name, 
+                        enabled: true,
+                        customMountPoint: '',
+                        createSymlink: false,
+                        symlinkPath: ''
+                    };
+                });
+                
+            this._loadBookmarkSettings();
+            
+        } catch (e) {
+            console.error('Error loading bookmarks:', e);
+            this._bookmarks = [];
+        }
+    }
+    
+    _loadBookmarkSettings() {
+        try {
+            let settingsStr = this._settings.get_string('bookmark-settings');
+            if (!settingsStr) return;
+            
+            let bookmarkSettings = JSON.parse(settingsStr);
+            this._bookmarks.forEach(bookmark => {
+                let settings = bookmarkSettings[bookmark.uri];
+                if (settings) {
+                    bookmark.enabled = settings.enabled !== false;
+                    bookmark.customMountPoint = settings.customMountPoint || '';
+                    bookmark.createSymlink = settings.createSymlink || false;
+                    bookmark.symlinkPath = settings.symlinkPath || '';
+                }
+            });
+        } catch (e) {
+            console.error('Error loading bookmark settings:', e);
+        }
+    }
+    
+    _saveBookmarkSettings() {
+        try {
+            let bookmarkSettings = {};
+            this._bookmarks.forEach(bookmark => {
+                bookmarkSettings[bookmark.uri] = {
+                    enabled: bookmark.enabled,
+                    customMountPoint: bookmark.customMountPoint,
+                    createSymlink: bookmark.createSymlink,
+                    symlinkPath: bookmark.symlinkPath
+                };
+            });
+            
+            this._settings.set_string('bookmark-settings', JSON.stringify(bookmarkSettings));
+        } catch (e) {
+            console.error('Error saving bookmark settings:', e);
+        }
+    }
+    
+    _extractNameFromUri(uri) {
+        try {
+            let parsed = GLib.Uri.parse(uri, GLib.UriFlags.NONE);
+            let path = parsed.get_path() || '';
+            let host = parsed.get_host() || 'unknown';
+            return path.length > 1 ? `${host}${path}` : host;
+        } catch (e) {
+            return uri;
+        }
+    }
+    
+    _sanitizeForFilename(name) {
+        return name.replace(/[<>:"\/\\|?*]/g, '_')
+                  .replace(/\s+/g, '_')
+                  .replace(/_+/g, '_')
+                  .replace(/^_|_$/g, '');
     }
     
     _addGeneralSettings(page) {
@@ -139,19 +246,10 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         mountBaseRow.add_suffix(browseButton);
         group.add(mountBaseRow);
         
-        // Symbolic links option
-        const symlinkRow = new Adw.SwitchRow({
-            title: _('Create Symbolic Links'),
-            subtitle: _('Create symbolic links for mounted locations in the base directory')
-        });
-        
-        this._settings.bind('symlink-mounts', symlinkRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        group.add(symlinkRow);
-        
         // Info about default behavior
         const infoRow = new Adw.ActionRow({
             title: _('Default Behavior'),
-            subtitle: _('If empty, system will choose mount points automatically')
+            subtitle: _('If empty, defaults to ~/NetworkMounts for symlinks')
         });
         group.add(infoRow);
         
@@ -163,6 +261,123 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         group.add(exampleRow);
         
         page.add(group);
+    }
+    
+    _addBookmarkSettings(page) {
+        if (this._bookmarks.length === 0) {
+            const noBookmarksGroup = new Adw.PreferencesGroup({
+                title: _('No Network Bookmarks Found'),
+                description: _('Add network locations to your file manager bookmarks to configure them here')
+            });
+            
+            const infoRow = new Adw.ActionRow({
+                title: _('How to add bookmarks'),
+                subtitle: _('Open Files, connect to a server (smb://, ftp://, etc.), then bookmark it')
+            });
+            noBookmarksGroup.add(infoRow);
+            page.add(noBookmarksGroup);
+            return;
+        }
+        
+        this._bookmarks.forEach((bookmark, index) => {
+            const group = new Adw.PreferencesGroup({
+                title: bookmark.name,
+                description: bookmark.uri
+            });
+            
+            // Enable/disable auto-mount
+            const enableRow = new Adw.SwitchRow({
+                title: _('Auto Mount'),
+                subtitle: _('Automatically mount this location on startup and periodic checks')
+            });
+            
+            enableRow.set_active(bookmark.enabled);
+            enableRow.connect('notify::active', () => {
+                this._bookmarks[index].enabled = enableRow.get_active();
+                this._saveBookmarkSettings();
+            });
+            group.add(enableRow);
+            
+            // Create symlink option
+            const symlinkRow = new Adw.SwitchRow({
+                title: _('Create Symlink'),
+                subtitle: _('Create a symbolic link in the base directory when mounted')
+            });
+            
+            symlinkRow.set_active(bookmark.createSymlink);
+            symlinkRow.connect('notify::active', () => {
+                this._bookmarks[index].createSymlink = symlinkRow.get_active();
+                this._saveBookmarkSettings();
+                // Enable/disable the symlink path row and hint
+                symlinkPathRow.set_sensitive(symlinkRow.get_active());
+                symlinkHintRow.set_sensitive(symlinkRow.get_active());
+            });
+            group.add(symlinkRow);
+            
+            // Symlink path
+            const symlinkPathRow = new Adw.EntryRow({
+                title: _('Symlink Name'),
+                text: bookmark.symlinkPath
+            });
+            
+            symlinkPathRow.set_sensitive(bookmark.createSymlink);
+            
+            symlinkPathRow.connect('notify::text', () => {
+                this._bookmarks[index].symlinkPath = symlinkPathRow.get_text();
+                this._saveBookmarkSettings();
+            });
+            group.add(symlinkPathRow);
+            
+            // Add hint row for default value
+            const symlinkHintRow = new Adw.ActionRow({
+                title: _('Default: ') + this._sanitizeForFilename(bookmark.name)
+            });
+            symlinkHintRow.set_sensitive(bookmark.createSymlink);
+            group.add(symlinkHintRow);
+            
+            // Custom mount point (legacy - also used for symlink if symlinkPath is empty)
+            const mountPointRow = new Adw.EntryRow({
+                title: _('Custom Mount Point / Fallback Symlink Name'),
+                text: bookmark.customMountPoint
+            });
+            
+            // Add a separate row to explain the priority
+            const priorityHintRow = new Adw.ActionRow({
+                title: _('Priority: Symlink Name > Custom Mount Point > Default Name')
+            });
+            
+            mountPointRow.connect('notify::text', () => {
+                this._bookmarks[index].customMountPoint = mountPointRow.get_text();
+                this._saveBookmarkSettings();
+            });
+            group.add(mountPointRow);
+            group.add(priorityHintRow);
+            
+            page.add(group);
+        });
+        
+        // Refresh button
+        const refreshGroup = new Adw.PreferencesGroup();
+        const refreshRow = new Adw.ActionRow({
+            title: _('Refresh Bookmarks'),
+            subtitle: _('Reload bookmarks from file manager')
+        });
+        
+        const refreshButton = new Gtk.Button({
+            label: _('Refresh'),
+            valign: Gtk.Align.CENTER
+        });
+        
+        refreshButton.connect('clicked', () => {
+            this._loadBookmarks();
+            // Refresh the preferences window
+            this._window.close();
+            // The user will need to reopen preferences to see changes
+        });
+        
+        refreshRow.add_suffix(refreshButton);
+        refreshGroup.add(refreshRow);
+        page.add(refreshGroup);
     }
     
     _addAdvancedSettings(page) {
@@ -263,7 +478,7 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
             title: _('Choose Mount Base Directory'),
             action: Gtk.FileChooserAction.SELECT_FOLDER,
             modal: true,
-            transient_for: this._window // Use the stored window reference
+            transient_for: this._window
         });
         
         dialog.add_button(_('Cancel'), Gtk.ResponseType.CANCEL);

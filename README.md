@@ -20,7 +20,8 @@ Clone the repository or download the branch from github. A simple Makefile is in
 
 ```bash
 git clone https://github.com/gavindi/network-automount
-make -C network-automount install
+cd network-automount
+make install
 ```
 
 ##### Build Process

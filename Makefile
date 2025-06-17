@@ -10,7 +10,6 @@ BUILD_DIR = build
 SCHEMAS_DIR = schemas
 INSTALL_DIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 SYSTEM_SCHEMAS_DIR = /usr/share/glib-2.0/schemas
-LOCAL_SCHEMAS_DIR = $(HOME)/.local/share/glib-2.0/schemas
 
 # Files to include in the extension
 EXTENSION_FILES = \
@@ -23,33 +22,34 @@ SCHEMA_FILES = \
 
 # Default target
 all: build
+	@echo "Use 'make install' to install the extension."
 
 # Build the extension (compile schemas)
 build:
-    # Create build directory
-    mkdir -p $(BUILD_DIR)
 	@echo "Building extension..."
-    # Copy extension files
+	# Create build directory
+	mkdir -p $(BUILD_DIR)
+	# Copy extension files
 	cp $(EXTENSION_FILES) $(BUILD_DIR)/
-    # Copy and compile schema
-    mkdir -p $(BUILD_DIR)/schemas
-	cp $(SCHEMA_FILES) $(BUILD_DIR)/schemas/
-	glib-compile-schemas $(BUILD_DIR)/schemas/
+	# Copy and compile schema
+	mkdir -p $(BUILD_DIR)/$(SCHEMAS_DIR)
+	cp $(SCHEMA_FILES) $(BUILD_DIR)/$(SCHEMAS_DIR)/
+	glib-compile-schemas $(BUILD_DIR)/$(SCHEMAS_DIR)/
 	@echo "Build complete!"
 
 # Install extension to user directory
-install:
-    @echo "Installing extension to $(INSTALL_DIR)..."
-    # Remove existing installation
-    rm -rf $(INSTALL_DIR)
-    # Create installation directory
-    mkdir -p $(INSTALL_DIR)
-    # Copy all built files
-    cp -r $(EXTENSION_FILES) $(INSTALL_DIR)/
-    # Install schema to local schemas directory
-    mkdir -p $(INSTALL_DIR)/schemas
-    cp $(SCHEMA_FILES) $(INSTALL_DIR)/schemas/
-    glib-compile-schemas $(INSTALL_DIR)/schemas/
+install: build
+	@echo "Installing extension to $(INSTALL_DIR)..."
+	# Remove existing installation
+	rm -rf $(INSTALL_DIR)
+	# Create installation directory
+	mkdir -p $(INSTALL_DIR)
+	# Copy all built files
+	cp $(EXTENSION_FILES) $(INSTALL_DIR)/
+	# Install schema to extension directory
+	mkdir -p $(INSTALL_DIR)/schemas
+	cp $(SCHEMA_FILES) $(INSTALL_DIR)/schemas/
+	glib-compile-schemas $(INSTALL_DIR)/schemas/
 	@echo ""
 	@echo "Extension installed successfully!"
 	@echo "Please restart GNOME Shell:"

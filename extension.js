@@ -178,6 +178,8 @@ class NetworkMountIndicator extends PanelMenu.Button {
                         name, 
                         enabled: true,
                         customMountPoint: '',
+                        createSymlink: false,
+                        symlinkPath: '',
                         lastAttempt: 0,
                         failCount: 0
                     };
@@ -203,6 +205,8 @@ class NetworkMountIndicator extends PanelMenu.Button {
                 if (settings) {
                     bookmark.enabled = settings.enabled !== false;
                     bookmark.customMountPoint = settings.customMountPoint || '';
+                    bookmark.createSymlink = settings.createSymlink || false;
+                    bookmark.symlinkPath = settings.symlinkPath || '';
                 }
             });
         } catch (e) {
@@ -216,7 +220,9 @@ class NetworkMountIndicator extends PanelMenu.Button {
             this._bookmarks.forEach(bookmark => {
                 bookmarkSettings[bookmark.uri] = {
                     enabled: bookmark.enabled,
-                    customMountPoint: bookmark.customMountPoint
+                    customMountPoint: bookmark.customMountPoint,
+                    createSymlink: bookmark.createSymlink,
+                    symlinkPath: bookmark.symlinkPath
                 };
             });
             
@@ -298,8 +304,12 @@ class NetworkMountIndicator extends PanelMenu.Button {
         
         // Add mount status and symlink path
         if (isMounted) {
-            let symlinkPath = this._getSymlinkPath(bookmark);
-            statusParts.push(`(Mounted → ${symlinkPath})`);
+            if (bookmark.createSymlink || bookmark.customMountPoint) {
+                let symlinkPath = this._getSymlinkPath(bookmark);
+                statusParts.push(`(Mounted → ${symlinkPath})`);
+            } else {
+                statusParts.push('(Mounted)');
+            }
         } else if (bookmark.failCount > 0) {
             statusParts.push(`(Failed ${bookmark.failCount}x)`);
         }
@@ -339,8 +349,16 @@ class NetworkMountIndicator extends PanelMenu.Button {
             basePath = GLib.get_home_dir() + '/NetworkMounts';
         }
         
-        // Use custom mount point name if specified, otherwise use sanitized bookmark name
-        let linkName = bookmark.customMountPoint || this._sanitizeForFilename(bookmark.name);
+        // Priority order: symlinkPath > customMountPoint > sanitized bookmark name
+        let linkName;
+        if (bookmark.symlinkPath) {
+            linkName = bookmark.symlinkPath;
+        } else if (bookmark.customMountPoint) {
+            linkName = bookmark.customMountPoint;
+        } else {
+            linkName = this._sanitizeForFilename(bookmark.name);
+        }
+        
         return `${basePath}/${linkName}`;
     }
     
@@ -353,6 +371,11 @@ class NetworkMountIndicator extends PanelMenu.Button {
     }
     
     _createSymlink(bookmark) {
+        // Create symlink if explicitly enabled OR if custom mount point is set (legacy behavior)
+        if (!bookmark.createSymlink && !bookmark.customMountPoint) {
+            return true; // Not an error, just not requested
+        }
+        
         try {
             let gvfsPath = this._getGvfsMountPath(bookmark.uri);
             if (!gvfsPath) {
@@ -425,7 +448,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     
     _mountLocation(bookmark, isRetry = false, isStartup = false) {
         if (this._isLocationMounted(bookmark.uri)) {
-            // Even if already mounted, ensure symlink exists
+            // Even if already mounted, ensure symlink exists if requested
             this._createSymlink(bookmark);
             if (!isRetry && !isStartup) this._notify(_('Already Mounted'), bookmark.name);
             return;
@@ -448,12 +471,12 @@ class NetworkMountIndicator extends PanelMenu.Button {
                         bookmark.lastAttempt = Date.now();
                         this._mountedLocations.set(bookmark.uri, Date.now());
                         
-                        // Create symlink after successful mount
+                        // Create symlink after successful mount (if requested)
                         GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
                             let symlinkCreated = this._createSymlink(bookmark);
                             
                             if (!isStartup) {
-                                let message = symlinkCreated ? 
+                                let message = (bookmark.createSymlink || bookmark.customMountPoint) && symlinkCreated ? 
                                     `${bookmark.name} → ${this._getSymlinkPath(bookmark)}` : 
                                     bookmark.name;
                                 this._notify(_('Mounted Successfully'), message);
@@ -519,8 +542,10 @@ class NetworkMountIndicator extends PanelMenu.Button {
             let mount = file.find_enclosing_mount(null);
             
             if (mount) {
-                // Remove symlink before unmounting
-                this._removeSymlink(bookmark);
+                // Remove symlink before unmounting (if it was created via createSymlink OR customMountPoint)
+                if (bookmark.createSymlink || bookmark.customMountPoint) {
+                    this._removeSymlink(bookmark);
+                }
                 
                 mount.unmount_with_operation(
                     Gio.MountUnmountFlags.NONE,
@@ -546,7 +571,9 @@ class NetworkMountIndicator extends PanelMenu.Button {
                 );
             } else {
                 // If not mounted, still try to clean up any stale symlinks
-                this._removeSymlink(bookmark);
+                if (bookmark.createSymlink || bookmark.customMountPoint) {
+                    this._removeSymlink(bookmark);
+                }
                 this._notify(_('Not Mounted'), bookmark.name);
             }
         } catch (e) {
@@ -565,7 +592,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
                 total++;
                 if (this._isLocationMounted(bookmark.uri)) {
                     mounted++;
-                    // Ensure symlink exists for already mounted locations
+                    // Ensure symlink exists for already mounted locations (if requested)
                     this._createSymlink(bookmark);
                 } else {
                     this._mountLocation(bookmark, false, isStartup);
@@ -630,7 +657,9 @@ class NetworkMountIndicator extends PanelMenu.Button {
     _cleanupAllSymlinks() {
         // Clean up all tracked symlinks
         this._bookmarks.forEach(bookmark => {
-            this._removeSymlink(bookmark);
+            if (bookmark.createSymlink || bookmark.customMountPoint) {
+                this._removeSymlink(bookmark);
+            }
         });
         this._symlinkPaths.clear();
     }

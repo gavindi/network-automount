@@ -24,12 +24,12 @@
     <key name="custom-mount-base" type="s">
       <default>''</default>
       <summary>Custom mount base directory</summary>
-      <description>Base directory for custom mount points (empty = use system default)</description>
+      <description>Base directory for custom mount points and symlinks (empty = use ~/NetworkMounts for symlinks)</description>
     </key>
     <key name="bookmark-settings" type="s">
       <default>'{}'</default>
       <summary>Bookmark-specific settings</summary>
-      <description>JSON string containing per-bookmark configuration</description>
+      <description>JSON string containing per-bookmark configuration including symlink settings</description>
     </key>
     <key name="retry-attempts" type="i">
       <default>3</default>
@@ -41,10 +41,11 @@
       <summary>Retry delay in seconds</summary>
       <description>Delay between retry attempts</description>
     </key>
+    <!-- Legacy setting - kept for backward compatibility but not used -->
     <key name="symlink-mounts" type="b">
       <default>false</default>
-      <summary>Create symbolic links for mounts</summary>
-      <description>Create symbolic links in a custom directory pointing to mounted locations</description>
+      <summary>Create symbolic links for mounts (legacy)</summary>
+      <description>Legacy setting - per-mount symlink configuration is now used instead</description>
     </key>
   </schema>
 </schemalist>
