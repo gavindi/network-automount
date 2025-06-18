@@ -532,8 +532,8 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         
         // Extension info
         const extensionInfoRow = new Adw.ActionRow({
-            title: _('Network Auto Mount 2025'),
-            subtitle: _('Gavin Graham')
+            title: _('Network Auto Mount'),
+            subtitle: _('2025 - Gavin Graham')
         });
         
         const extensionIcon = new Gtk.Image({
@@ -548,7 +548,7 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         // Dedication
         const dedicationRow = new Adw.ActionRow({
             title: _('This one is for Jupiter'),
-            subtitle: _('✨')
+            subtitle: _('✨🐱✨')
         });
         aboutGroup.add(dedicationRow);
         
