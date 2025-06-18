@@ -75,4 +75,4 @@ make dev
 Bugs should be reported to the Github bug tracker [https://github.com/gavindi/network-automount/issues](https://github.com/gavindi/network-automount/issues).
 
 ## License
-Network Automount Gnome Shell extension is distributed under the terms of the GNU General Public License, version 2 or later. See the COPYING file for details.
+Network Automount Gnome Shell extension is distributed under the terms of the GNU General Public License, version 2. See the LICENSE file for details.
