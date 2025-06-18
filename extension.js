@@ -48,6 +48,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
         this._timeoutId = null;
         this._source = null;
         this._startupMountInProgress = false;
+        this._bookmarkMenuItems = new Map(); // Track submenu items for updates
         
         this._connectSettings();
         this._buildMenu();
@@ -263,6 +264,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     
     _updateBookmarksList() {
         this._bookmarksSection.removeAll();
+        this._bookmarkMenuItems.clear();
         
         if (this._bookmarks.length === 0) {
             let noBookmarksItem = new PopupMenu.PopupMenuItem(_('No network bookmarks found'), {
@@ -280,41 +282,35 @@ class NetworkMountIndicator extends PanelMenu.Button {
                 this._createSymlink(bookmark);
             }
             
-            // Single line with everything combined
-            let item = this._createBookmarkItem(bookmark, index);
-            this._bookmarksSection.addMenuItem(item);
+            // Create collapsible bookmark item
+            let submenuItem = this._createBookmarkSubmenu(bookmark, index);
+            this._bookmarksSection.addMenuItem(submenuItem);
         });
         
         this._updateStatus();
     }
     
-    _createBookmarkItem(bookmark, index) {
-        let item = new PopupMenu.PopupSwitchMenuItem(bookmark.name, bookmark.enabled);
+    _createBookmarkSubmenu(bookmark, index) {
+        // Create the main submenu item
+        let submenuItem = new PopupMenu.PopupSubMenuMenuItem(bookmark.name);
         
-        // Connect the toggle functionality - only controls auto-mount setting
-        item.connect('toggled', (item, state) => {
-            this._bookmarks[index].enabled = state;
-            this._saveBookmarkSettings();
-            this._updateStatus();
-            this._updateBookmarksList(); // Refresh to update status
+        // Store reference for updates
+        this._bookmarkMenuItems.set(bookmark.uri, {
+            submenu: submenuItem,
+            bookmark: bookmark,
+            index: index
         });
         
-        // Update the label to include all status info in one line
-        this._updateCompleteItemLabel(item, bookmark);
+        // Update the main item label with status
+        this._updateMainItemLabel(submenuItem, bookmark);
         
-        // Add click handler for manual mount/unmount on the main item text
-        item.connect('activate', () => {
-            if (this._isLocationMounted(bookmark.uri)) {
-                this._unmountLocation(bookmark);
-            } else {
-                this._mountLocation(bookmark);
-            }
-        });
+        // Populate the submenu
+        this._populateBookmarkSubmenu(submenuItem, bookmark, index);
         
-        return item;
+        return submenuItem;
     }
     
-    _updateCompleteItemLabel(item, bookmark) {
+    _updateMainItemLabel(submenuItem, bookmark) {
         let isMounted = this._isLocationMounted(bookmark.uri);
         let statusSymbol = isMounted ? '\u{1f7e2}' : '\u26aa';
         
@@ -322,24 +318,101 @@ class NetworkMountIndicator extends PanelMenu.Button {
             statusSymbol = '\u{1f7e1}';
         }
         
-        // Build complete status info
-        let statusParts = [bookmark.name];
+        // Main label shows just name and status symbol
+        submenuItem.label.text = `${statusSymbol} ${bookmark.name}`;
+    }
+    
+    _populateBookmarkSubmenu(submenuItem, bookmark, index) {
+        let submenu = submenuItem.menu;
         
-        // Add mount status and symlink path
+        // Clear existing items
+        submenu.removeAll();
+        
+        // Auto-mount toggle
+        let autoMountItem = new PopupMenu.PopupSwitchMenuItem(_('Auto Mount'), bookmark.enabled);
+        autoMountItem.connect('toggled', (item, state) => {
+            this._bookmarks[index].enabled = state;
+            this._saveBookmarkSettings();
+            this._updateStatus();
+            this._updateMainItemLabel(submenuItem, bookmark);
+        });
+        submenu.addMenuItem(autoMountItem);
+        
+        // Mount status and controls
+        let isMounted = this._isLocationMounted(bookmark.uri);
         if (isMounted) {
+            // Show mounted status
+            let statusItem = new PopupMenu.PopupMenuItem(_('Status: Mounted'), {
+                reactive: false,
+                style_class: 'popup-menu-item-inactive'
+            });
+            submenu.addMenuItem(statusItem);
+            
+            // Show symlink path if applicable
             if (bookmark.createSymlink || bookmark.customMountPoint) {
                 let symlinkPath = this._getSymlinkPath(bookmark);
-                statusParts.push(`(Mounted → ${symlinkPath})`);
-            } else {
-                statusParts.push('(Mounted)');
+                let symlinkItem = new PopupMenu.PopupMenuItem(_(`Linked to: ${symlinkPath}`), {
+                    reactive: false,
+                    style_class: 'popup-menu-item-inactive'
+                });
+                submenu.addMenuItem(symlinkItem);
             }
-        } else if (bookmark.failCount > 0) {
-            statusParts.push(`(Failed ${bookmark.failCount}x)`);
+            
+            // Unmount button
+            let unmountItem = new PopupMenu.PopupMenuItem(_('Unmount'));
+            unmountItem.connect('activate', () => {
+                this._unmountLocation(bookmark);
+            });
+            submenu.addMenuItem(unmountItem);
+            
+        } else {
+            // Show unmounted status
+            let statusText = bookmark.failCount > 0 ? 
+                _(`Status: Failed (${bookmark.failCount} attempts)`) : 
+                _('Status: Not Mounted');
+            
+            let statusItem = new PopupMenu.PopupMenuItem(statusText, {
+                reactive: false,
+                style_class: 'popup-menu-item-inactive'
+            });
+            submenu.addMenuItem(statusItem);
+            
+            // Mount button
+            let mountItem = new PopupMenu.PopupMenuItem(_('Mount Now'));
+            mountItem.connect('activate', () => {
+                this._mountLocation(bookmark);
+            });
+            submenu.addMenuItem(mountItem);
         }
         
-        // Combine everything into one line
-        let labelText = `${statusSymbol} ${statusParts.join(' ')}`;
-        item.label.text = labelText;
+        submenu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        
+        // Connection details
+        let uriItem = new PopupMenu.PopupMenuItem(_(`URI: ${bookmark.uri}`), {
+            reactive: false,
+            style_class: 'popup-menu-item-inactive'
+        });
+        submenu.addMenuItem(uriItem);
+        
+        // Symlink configuration status
+        if (bookmark.createSymlink) {
+            let symlinkConfigItem = new PopupMenu.PopupMenuItem(_('Symlink: Enabled'), {
+                reactive: false,
+                style_class: 'popup-menu-item-inactive'
+            });
+            submenu.addMenuItem(symlinkConfigItem);
+        }
+    }
+    
+    _updateBookmarkSubmenu(bookmark) {
+        let menuData = this._bookmarkMenuItems.get(bookmark.uri);
+        if (!menuData) return;
+        
+        // Update main label
+        this._updateMainItemLabel(menuData.submenu, bookmark);
+        
+        // Repopulate submenu with current data
+        this._populateBookmarkSubmenu(menuData.submenu, bookmark, menuData.index);
     }
     
     _isLocationMounted(uri) {
@@ -505,8 +578,8 @@ class NetworkMountIndicator extends PanelMenu.Button {
                                 this._notify(_('Mounted Successfully'), message);
                             }
                             
-                            // Always update the menu after successful mount and symlink creation
-                            this._updateBookmarksList();
+                            // Update the specific bookmark submenu
+                            this._updateBookmarkSubmenu(bookmark);
                             this._updateStatus();
                             
                             return GLib.SOURCE_REMOVE;
@@ -547,7 +620,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
             );
         }
         
-        this._updateBookmarksList();
+        this._updateBookmarkSubmenu(bookmark);
     }
     
     _scheduleRetry(bookmark, delaySecs) {
@@ -582,8 +655,8 @@ class NetworkMountIndicator extends PanelMenu.Button {
                             this._mountedLocations.delete(bookmark.uri);
                             this._notify(_('Unmounted'), bookmark.name);
                             
-                            // Always update the menu after successful unmount
-                            this._updateBookmarksList();
+                            // Update the specific bookmark submenu
+                            this._updateBookmarkSubmenu(bookmark);
                             this._updateStatus();
                             
                         } catch (e) {
@@ -708,6 +781,8 @@ class NetworkMountIndicator extends PanelMenu.Button {
         if (this._source) {
             this._source.destroy();
         }
+        
+        this._bookmarkMenuItems.clear();
         super.destroy();
     }
 }
