@@ -153,16 +153,17 @@ class NetworkMountIndicator extends PanelMenu.Button {
     }
 
     _updateStatus() {
+        let total = this._bookmarks.length;
+        let mounted = this._bookmarks.filter(b => this._isLocationMounted(b.uri)).length;
         let enabled = this._bookmarks.filter(b => b.enabled).length;
-        let mounted = this._bookmarks.filter(b => b.enabled && this._isLocationMounted(b.uri)).length;
         let interval = this._settings.get_int('check-interval');
-        
-        this._statusItem.label.text = _(`${mounted}/${enabled} mounted \u2022 Check every ${interval}min`);
-        
+    
+        this._statusItem.label.text = _(`${mounted}/${total} mounted \u2022 Check every ${interval}min`);
+    
         // Update icon based on status
-        if (enabled === 0) {
+        if (total === 0) {
             this._icon.icon_name = 'folder-remote-symbolic';
-        } else if (mounted === enabled) {
+        } else if (mounted >= enabled) {
             this._icon.icon_name = 'folder-remote-symbolic'; // All good
             this._icon.add_style_class_name('success');
         } else if (mounted > 0) {
