@@ -57,6 +57,15 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         
         this._addAdvancedSettings(advancedPage);
         window.add(advancedPage);
+        
+        // About Page
+        const aboutPage = new Adw.PreferencesPage({
+            title: _('About'),
+            icon_name: 'folder-remote-symbolic'
+        });
+        
+        this._addAboutSettings(aboutPage);
+        window.add(aboutPage);
     }
     
     _loadBookmarks() {
@@ -513,6 +522,56 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         });
         
         dialog.present();
+    }
+    
+    _addAboutSettings(page) {
+        const aboutGroup = new Adw.PreferencesGroup({
+            title: _('Network Auto Mount'),
+            description: _('Automatically mount bookmarked network locations with advanced configuration')
+        });
+        
+        // Extension info
+        const extensionInfoRow = new Adw.ActionRow({
+            title: _('Network Auto Mount 2025'),
+            subtitle: _('Gavin Graham')
+        });
+        
+        const extensionIcon = new Gtk.Image({
+            icon_name: 'folder-remote-symbolic',
+            pixel_size: 48,
+            valign: Gtk.Align.CENTER
+        });
+        
+        extensionInfoRow.add_prefix(extensionIcon);
+        aboutGroup.add(extensionInfoRow);
+        
+        // Dedication
+        const dedicationRow = new Adw.ActionRow({
+            title: _('This one is for Jupiter'),
+            subtitle: _('✨')
+        });
+        aboutGroup.add(dedicationRow);
+        
+        page.add(aboutGroup);
+        
+        // Technical details group
+        const technicalGroup = new Adw.PreferencesGroup({
+            title: _('Technical Information')
+        });
+        
+        const versionRow = new Adw.ActionRow({
+            title: _('Version'),
+            subtitle: _('2.0')
+        });
+        technicalGroup.add(versionRow);
+        
+        const uuidRow = new Adw.ActionRow({
+            title: _('Extension UUID'),
+            subtitle: _('network-automount@gavindi.github.com')
+        });
+        technicalGroup.add(uuidRow);
+        
+        page.add(technicalGroup);
     }
     
     _resetSettings() {
