@@ -10,9 +10,6 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         this._window = window; // Store reference to the window
         this._bookmarks = [];
         
-        // Move tabs to top of window
-        window.set_search_enabled(false);
-        
         // Load bookmarks for configuration
         this._loadBookmarks();
         
