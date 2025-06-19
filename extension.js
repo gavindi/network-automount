@@ -117,13 +117,11 @@ class NetworkMountIndicator extends PanelMenu.Button {
             style_class: 'popup-menu-item-inactive'
         });
         this.menu.addMenuItem(this._statusItem);
-        
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         
         // Bookmarks section
         this._bookmarksSection = new PopupMenu.PopupMenuSection();
         this.menu.addMenuItem(this._bookmarksSection);
-        
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         
         // Controls
