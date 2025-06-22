@@ -544,13 +544,13 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
     
     _addAboutSettings(page) {
         const aboutGroup = new Adw.PreferencesGroup({
-            title: _('Network Auto Mount'),
+            title: _('Network Share Automount'),
             description: _('Automatically mount bookmarked network locations with advanced configuration')
         });
         
         // Extension info
         const extensionInfoRow = new Adw.ActionRow({
-            title: _('Network Auto Mount'),
+            title: _('Network Share Automount'),
             subtitle: _('© 2025 Gavin Graham')
         });
         
@@ -585,7 +585,7 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
         
         const uuidRow = new Adw.ActionRow({
             title: _('Extension UUID'),
-            subtitle: _('network-automount@gavindi.github.com')
+            subtitle: _('network-share-automount@gavindi.github.com')
         });
         technicalGroup.add(uuidRow);
         
