@@ -32,7 +32,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     }
 
     _init(settings) {
-        super._init(0.0, _('Network Share Automount'));
+        super._init(0.0, _('Network Auto Mount'));
         
         this._settings = settings;
         this._icon = new St.Icon({
@@ -85,7 +85,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     
     _setupNotificationSource() {
         this._source = new MessageTray.Source({
-            title: _('Network Share Automount'),
+            title: _('Network Auto Mount'),
             iconName: 'folder-remote-symbolic'
         });
         Main.messageTray.add(this._source);
@@ -105,7 +105,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     
     _buildMenu() {
         // Header with status
-        this._headerItem = new PopupMenu.PopupMenuItem(_('Network Share Automount'), {
+        this._headerItem = new PopupMenu.PopupMenuItem(_('Network Auto Mount'), {
             reactive: false,
             style_class: 'popup-menu-item-header'
         });
@@ -790,7 +790,7 @@ export default class NetworkAutoMountExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
         this._indicator = new NetworkMountIndicator(this._settings);
-        Main.panel.addToStatusArea('network-share-automount', this._indicator);
+        Main.panel.addToStatusArea('network-automount', this._indicator);
     }
     
     disable() {

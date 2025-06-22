@@ -1,4 +1,4 @@
-# Network Share Automount
+# Network Auto Mount
 ![screenshot](https://github.com/gavindi/network-automount/blob/master/media/NetworkautomountScreenshot.png)
 
 ## Mount your bookmarked network shares
@@ -19,8 +19,8 @@ This extension has no special build dependancies.
 Clone the repository or download the branch from github. A simple Makefile is included.
 
 ```bash
-git clone https://github.com/gavindi/network-share-automount
-cd network-share-automount
+git clone https://github.com/gavindi/network-automount
+cd network-automount
 make install
 ```
 
@@ -257,7 +257,7 @@ You now have:
 
 ## Bug Reporting
 
-Bugs should be reported to the Github bug tracker [https://github.com/gavindi/network-share-automount/issues](https://github.com/gavindi/network-share-automount/issues).
+Bugs should be reported to the Github bug tracker [https://github.com/gavindi/network-automount/issues](https://github.com/gavindi/network-automount/issues).
 
 ## License
 Network Automount Gnome Shell extension is distributed under the terms of the GNU General Public License, version 2. See the LICENSE file for details.
