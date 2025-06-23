@@ -585,7 +585,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         
         const uuidRow = new Adw.ActionRow({
             title: _('Extension UUID'),
-            subtitle: _('network-automount@gavindi.github.com')
+            subtitle: _('network-share-automount@gavindi.github.com')
         });
         technicalGroup.add(uuidRow);
         

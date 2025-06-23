@@ -1,4 +1,4 @@
-# Network Auto Mount
+# Network Share Automount
 ![screenshot](https://github.com/gavindi/network-automount/blob/master/media/NetworkautomountScreenshot.png)
 
 ## Mount your bookmarked network shares

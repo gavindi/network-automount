@@ -1,8 +1,8 @@
 # Network Share Automount GNOME Shell Extension Makefile
 
 # Extension metadata
-UUID = network-automount@gavindi.github.com
-EXTENSION_NAME = network-automount
+UUID = network-share-automount@gavindi.github.com
+EXTENSION_NAME = network-share-automount
 
 # Directories
 SRC_DIR = .
@@ -18,7 +18,7 @@ EXTENSION_FILES = \
 	metadata.json
 
 SCHEMA_FILES = \
-	$(SCHEMAS_DIR)/org.gnome.shell.extensions.network-automount.gschema.xml
+	$(SCHEMAS_DIR)/org.gnome.shell.extensions.network-share-automount.gschema.xml
 
 # Default target
 all: build
@@ -81,7 +81,7 @@ uninstall-system:
 	@echo "Uninstalling system-wide extension..."
 	-gnome-extensions disable $(UUID)
 	sudo rm -rf /usr/share/gnome-shell/extensions/$(UUID)
-	sudo rm -f $(SYSTEM_SCHEMAS_DIR)/org.gnome.shell.extensions.network-automount.gschema.xml
+	sudo rm -f $(SYSTEM_SCHEMAS_DIR)/org.gnome.shell.extensions.network-share-automount.gschema.xml
 	sudo glib-compile-schemas $(SYSTEM_SCHEMAS_DIR)/
 	@echo "System-wide extension uninstalled!"
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema id="org.gnome.shell.extensions.network-automount" path="/org/gnome/shell/extensions/network-automount/">
+  <schema id="org.gnome.shell.extensions.network-share-automount" path="/org/gnome/shell/extensions/network-share-automount/">
     <key name="check-interval" type="i">
       <default>5</default>
       <summary>Check interval in minutes</summary>
