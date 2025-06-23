@@ -22,7 +22,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-export default class NetworkAutoMountPreferences extends ExtensionPreferences {
+export default class NetworkShareAutomountPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         this._settings = this.getSettings();
         this._window = window; // Store reference to the window
@@ -544,13 +544,13 @@ export default class NetworkAutoMountPreferences extends ExtensionPreferences {
     
     _addAboutSettings(page) {
         const aboutGroup = new Adw.PreferencesGroup({
-            title: _('Network Auto Mount'),
+            title: _('Network Share Automount'),
             description: _('Automatically mount bookmarked network locations with advanced configuration')
         });
         
         // Extension info
         const extensionInfoRow = new Adw.ActionRow({
-            title: _('Network Auto Mount'),
+            title: _('Network Share Automount'),
             subtitle: _('© 2025 Gavin Graham')
         });
         

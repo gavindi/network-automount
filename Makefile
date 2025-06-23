@@ -1,4 +1,4 @@
-# Network Auto Mount GNOME Shell Extension Makefile
+# Network Share Automount GNOME Shell Extension Makefile
 
 # Extension metadata
 UUID = network-automount@gavindi.github.com
@@ -130,7 +130,7 @@ dev: clean install enable
 
 # Help target
 help:
-	@echo "Network Auto Mount Extension Build System"
+	@echo "Network Share Automount Extension Build System"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  build           - Build the extension (compile schemas)"
