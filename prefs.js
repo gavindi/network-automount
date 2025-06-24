@@ -110,7 +110,6 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
                         uri, 
                         name, 
                         enabled: true,
-                        customMountPoint: '',
                         createSymlink: false,
                         symlinkPath: ''
                     };
@@ -134,7 +133,6 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
                 let settings = bookmarkSettings[bookmark.uri];
                 if (settings) {
                     bookmark.enabled = settings.enabled !== false;
-                    bookmark.customMountPoint = settings.customMountPoint || '';
                     bookmark.createSymlink = settings.createSymlink || false;
                     bookmark.symlinkPath = settings.symlinkPath || '';
                 }
@@ -150,7 +148,6 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             this._bookmarks.forEach(bookmark => {
                 bookmarkSettings[bookmark.uri] = {
                     enabled: bookmark.enabled,
-                    customMountPoint: bookmark.customMountPoint,
                     createSymlink: bookmark.createSymlink,
                     symlinkPath: bookmark.symlinkPath
                 };
@@ -245,13 +242,13 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
     
     _addMountSettings(page) {
         const group = new Adw.PreferencesGroup({
-            title: _('Custom Mount Points'),
+            title: _('Symlink Configuration'),
             description: _('Configure symlink base directory - symlinks work for all mounted locations regardless of auto-mount setting')
         });
         
-        // Custom mount base directory
+        // Symlink base directory
         const mountBaseRow = new Adw.EntryRow({
-            title: _('Base Mount Directory'),
+            title: _('Base Symlink Directory'),
             text: this._settings.get_string('custom-mount-base')
         });
         
@@ -283,7 +280,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         // Example row
         const exampleRow = new Adw.ActionRow({
             title: _('Example'),
-            subtitle: _('~/mounts or /media/mounts')
+            subtitle: _('~/symlinks or /media/symlinks')
         });
         group.add(exampleRow);
         
@@ -361,24 +358,6 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             });
             symlinkHintRow.set_sensitive(bookmark.createSymlink);
             group.add(symlinkHintRow);
-            
-            // Custom mount point (legacy - also used for symlink if symlinkPath is empty)
-            const mountPointRow = new Adw.EntryRow({
-                title: _('Custom Mount Point / Fallback Symlink Name'),
-                text: bookmark.customMountPoint
-            });
-            
-            // Add a separate row to explain the priority
-            const priorityHintRow = new Adw.ActionRow({
-                title: _('Priority: Symlink Name > Custom Mount Point > Default Name')
-            });
-            
-            mountPointRow.connect('notify::text', () => {
-                this._bookmarks[index].customMountPoint = mountPointRow.get_text();
-                this._saveBookmarkSettings();
-            });
-            group.add(mountPointRow);
-            group.add(priorityHintRow);
             
             page.add(group);
         });
@@ -502,7 +481,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
     
     _chooseMountDirectory(entry) {
         const dialog = new Gtk.FileChooserDialog({
-            title: _('Choose Mount Base Directory'),
+            title: _('Choose Symlink Base Directory'),
             action: Gtk.FileChooserAction.SELECT_FOLDER,
             modal: true,
             transient_for: this._window
