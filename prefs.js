@@ -51,7 +51,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         
         // Mount Points Page
         const mountsPage = new Adw.PreferencesPage({
-            title: _('Mount Points'),
+            title: _('Mount Point'),
             icon_name: 'folder-symbolic'
         });
         
@@ -60,7 +60,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         
         // Bookmarks Configuration Page
         const bookmarksPage = new Adw.PreferencesPage({
-            title: _('Bookmarks'),
+            title: _('Network Shares'),
             icon_name: 'user-bookmarks-symbolic'
         });
         
@@ -530,7 +530,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         // Extension info
         const extensionInfoRow = new Adw.ActionRow({
             title: _('Network Share Automount'),
-            subtitle: _('© 2025 Gavin Graham')
+            subtitle: _('© 2025 Gavin Graham, Released under GPLv2')
         });
         
         const extensionIcon = new Gtk.Image({
@@ -568,6 +568,12 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         });
         technicalGroup.add(uuidRow);
         
+        const githubRow = new Adw.ActionRow({
+            title: _('Source code:'),
+            subtitle: _('https://github.com/gavindi/network-automount')
+        });
+        technicalGroup.add(githubRow);
+
         page.add(technicalGroup);
     }
     

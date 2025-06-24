@@ -787,7 +787,7 @@ export default class NetworkShareAutomountExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
         this._indicator = new NetworkMountIndicator(this._settings);
-        Main.panel.addToStatusArea('network-automount', this._indicator);
+        Main.panel.addToStatusArea('network-share-automount', this._indicator);
     }
     
     disable() {
