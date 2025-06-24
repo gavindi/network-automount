@@ -1,5 +1,5 @@
 /*
- * Network Share Automount extension for Gnome 44+
+ * Network Share Automount extension for Gnome 45+
  * Copyright 2025 Gavin Graham (gavindi)
  *
  * This program is free software: you can redistribute it and/or modify
