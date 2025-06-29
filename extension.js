@@ -31,10 +31,11 @@ class NetworkMountIndicator extends PanelMenu.Button {
         GObject.registerClass(this);
     }
 
-    _init(settings) {
+    _init(settings, extension) {
         super._init(0.0, _('Network Share Automount'));
         
         this._settings = settings;
+        this._extension = extension;
         this._icon = new St.Icon({
             icon_name: 'folder-remote-symbolic',
             style_class: 'system-status-icon'
@@ -749,7 +750,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     
     _openSettings() {
         try {
-            GLib.spawn_command_line_async('gnome-extensions prefs network-share-automount@gavindi.github.com');
+            this._extension.openPreferences();
         } catch (e) {
             this._notify(_('Settings'), _('Could not open preferences'), true);
         }
@@ -786,7 +787,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
 export default class NetworkShareAutomountExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
-        this._indicator = new NetworkMountIndicator(this._settings);
+        this._indicator = new NetworkMountIndicator(this._settings, this);
         Main.panel.addToStatusArea('network-share-automount', this._indicator);
     }
     

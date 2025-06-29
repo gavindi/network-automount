@@ -4,5 +4,6 @@
   "name": "Network Share Automount",
   "description": "Automatically mount bookmarked network locations with advanced configuration options and allows for creating symlinks for easy access from your homer directory",
   "version": 2,
-  "settings-schema": "org.gnome.shell.extensions.network-share-automount"
+  "settings-schema": "org.gnome.shell.extensions.network-share-automount",
+  "url": "https://github.com/gavindi/network-share-automount"
 }
