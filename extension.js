@@ -47,6 +47,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
         this._symlinkPaths = new Map(); // Track symlinks for cleanup
         this._retryQueue = new Map();
         this._timeoutId = null;
+        this._timeoutIds = new Set(); // Track all timeout IDs for cleanup
         this._source = null;
         this._startupMountInProgress = false;
         this._bookmarkMenuItems = new Map(); // Track submenu items for updates
@@ -59,18 +60,22 @@ class NetworkMountIndicator extends PanelMenu.Button {
         
         // Mount all enabled bookmarks on startup with status updates
         this._startupMountInProgress = true;
-        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
+        const startupTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
             this._checkAndMountAll(false, true); // isManual=false, isStartup=true
+            this._timeoutIds.delete(startupTimeoutId);
             return GLib.SOURCE_REMOVE;
         });
+        this._timeoutIds.add(startupTimeoutId);
         
         // Additional status refresh after startup mounts complete
-        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 10, () => {
+        const statusTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 10, () => {
             this._startupMountInProgress = false;
             this._updateBookmarksList();
             this._updateStatus();
+            this._timeoutIds.delete(statusTimeoutId);
             return GLib.SOURCE_REMOVE;
         });
+        this._timeoutIds.add(statusTimeoutId);
     }
     
     _connectSettings() {
@@ -565,7 +570,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
                         this._mountedLocations.set(bookmark.uri, Date.now());
                         
                         // Create symlink after successful mount (if requested)
-                        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+                        const symlinkTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
                             let symlinkCreated = this._createSymlink(bookmark);
                             
                             if (!isStartup) {
@@ -579,8 +584,10 @@ class NetworkMountIndicator extends PanelMenu.Button {
                             this._updateBookmarkSubmenu(bookmark);
                             this._updateStatus();
                             
+                            this._timeoutIds.delete(symlinkTimeoutId);
                             return GLib.SOURCE_REMOVE;
                         });
+                        this._timeoutIds.add(symlinkTimeoutId);
                         
                     } catch (e) {
                         console.error(`Failed to mount ${bookmark.name}:`, e);
@@ -621,12 +628,14 @@ class NetworkMountIndicator extends PanelMenu.Button {
     }
     
     _scheduleRetry(bookmark, delaySecs) {
-        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, delaySecs, () => {
+        const retryTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, delaySecs, () => {
             if (bookmark.enabled && !this._isLocationMounted(bookmark.uri)) {
                 this._mountLocation(bookmark, true, this._startupMountInProgress);
             }
+            this._timeoutIds.delete(retryTimeoutId);
             return GLib.SOURCE_REMOVE;
         });
+        this._timeoutIds.add(retryTimeoutId);
     }
     
     _unmountLocation(bookmark) {
@@ -735,6 +744,7 @@ class NetworkMountIndicator extends PanelMenu.Button {
     _startPeriodicCheck() {
         if (this._timeoutId) {
             GLib.source_remove(this._timeoutId);
+            this._timeoutId = null;
         }
         
         let interval = this._settings.get_int('check-interval');
@@ -767,10 +777,17 @@ class NetworkMountIndicator extends PanelMenu.Button {
     }
     
     destroy() {
+        // Remove periodic check timeout
         if (this._timeoutId) {
             GLib.source_remove(this._timeoutId);
             this._timeoutId = null;
         }
+        
+        // Remove all tracked timeouts
+        this._timeoutIds.forEach(timeoutId => {
+            GLib.source_remove(timeoutId);
+        });
+        this._timeoutIds.clear();
         
         // Clean up all symlinks when extension is disabled
         this._cleanupAllSymlinks();
