@@ -24,12 +24,7 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 
 export default class NetworkShareAutomountPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        this._settings = this.getSettings();
-        this._window = window; // Store reference to the window
-        this._bookmarks = [];
-        
-        // Load bookmarks for configuration
-        this._loadBookmarks();
+        const settings = this.getSettings();
         
         // General Settings Page
         const generalPage = new Adw.PreferencesPage({
@@ -37,7 +32,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             icon_name: 'preferences-system-symbolic'
         });
         
-        this._addGeneralSettings(generalPage);
+        this._addGeneralSettings(generalPage, settings);
         window.add(generalPage);
         
         // Notifications Page
@@ -46,7 +41,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             icon_name: 'preferences-desktop-notifications-symbolic'
         });
         
-        this._addNotificationSettings(notificationsPage);
+        this._addNotificationSettings(notificationsPage, settings);
         window.add(notificationsPage);
         
         // Mount Points Page
@@ -55,7 +50,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             icon_name: 'folder-symbolic'
         });
         
-        this._addMountSettings(mountsPage);
+        this._addMountSettings(mountsPage, settings, window);
         window.add(mountsPage);
         
         // Bookmarks Configuration Page
@@ -64,7 +59,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             icon_name: 'user-bookmarks-symbolic'
         });
         
-        this._addBookmarkSettings(bookmarksPage);
+        this._addBookmarkSettings(bookmarksPage, settings, window);
         window.add(bookmarksPage);
         
         // Advanced Page
@@ -73,7 +68,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             icon_name: 'preferences-other-symbolic'
         });
         
-        this._addAdvancedSettings(advancedPage);
+        this._addAdvancedSettings(advancedPage, settings, window);
         window.add(advancedPage);
         
         // About Page
@@ -93,15 +88,14 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             );
             
             if (!bookmarksFile.query_exists(null)) {
-                this._bookmarks = [];
-                return;
+                return [];
             }
             
             let [success, contents] = bookmarksFile.load_contents(null);
-            if (!success) return;
+            if (!success) return [];
             
             let bookmarkLines = new TextDecoder().decode(contents).split('\n');
-            this._bookmarks = bookmarkLines
+            return bookmarkLines
                 .filter(line => line.trim() && line.includes('://') && !line.startsWith('file://'))
                 .map(line => {
                     let [uri, ...nameParts] = line.trim().split(' ');
@@ -115,37 +109,38 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
                     };
                 });
                 
-            this._loadBookmarkSettings();
-            
         } catch (e) {
             console.error('Error loading bookmarks:', e);
-            this._bookmarks = [];
+            return [];
         }
     }
     
-    _loadBookmarkSettings() {
+    _loadBookmarkSettings(bookmarks, settings) {
         try {
-            let settingsStr = this._settings.get_string('bookmark-settings');
-            if (!settingsStr) return;
+            let settingsStr = settings.get_string('bookmark-settings');
+            if (!settingsStr) return bookmarks;
             
             let bookmarkSettings = JSON.parse(settingsStr);
-            this._bookmarks.forEach(bookmark => {
-                let settings = bookmarkSettings[bookmark.uri];
-                if (settings) {
-                    bookmark.enabled = settings.enabled !== false;
-                    bookmark.createSymlink = settings.createSymlink || false;
-                    bookmark.symlinkPath = settings.symlinkPath || '';
+            bookmarks.forEach(bookmark => {
+                let storedSettings = bookmarkSettings[bookmark.uri];
+                if (storedSettings) {
+                    bookmark.enabled = storedSettings.enabled !== false;
+                    bookmark.createSymlink = storedSettings.createSymlink || false;
+                    bookmark.symlinkPath = storedSettings.symlinkPath || '';
                 }
             });
+            
+            return bookmarks;
         } catch (e) {
             console.error('Error loading bookmark settings:', e);
+            return bookmarks;
         }
     }
     
-    _saveBookmarkSettings() {
+    _saveBookmarkSettings(bookmarks, settings) {
         try {
             let bookmarkSettings = {};
-            this._bookmarks.forEach(bookmark => {
+            bookmarks.forEach(bookmark => {
                 bookmarkSettings[bookmark.uri] = {
                     enabled: bookmark.enabled,
                     createSymlink: bookmark.createSymlink,
@@ -153,7 +148,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
                 };
             });
             
-            this._settings.set_string('bookmark-settings', JSON.stringify(bookmarkSettings));
+            settings.set_string('bookmark-settings', JSON.stringify(bookmarkSettings));
         } catch (e) {
             console.error('Error saving bookmark settings:', e);
         }
@@ -177,7 +172,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
                   .replace(/^_|_$/g, '');
     }
     
-    _addGeneralSettings(page) {
+    _addGeneralSettings(page, settings) {
         const group = new Adw.PreferencesGroup({
             title: _('Automatic Mounting'),
             description: _('Configure how often to check and mount network locations')
@@ -192,19 +187,19 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
                 upper: 60,
                 step_increment: 1,
                 page_increment: 5,
-                value: this._settings.get_int('check-interval')
+                value: settings.get_int('check-interval')
             })
         });
         
         intervalRow.connect('notify::value', () => {
-            this._settings.set_int('check-interval', intervalRow.get_value());
+            settings.set_int('check-interval', intervalRow.get_value());
         });
         
         group.add(intervalRow);
         page.add(group);
     }
     
-    _addNotificationSettings(page) {
+    _addNotificationSettings(page, settings) {
         const group = new Adw.PreferencesGroup({
             title: _('Notification Preferences'),
             description: _('Choose when to show notifications')
@@ -216,7 +211,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             subtitle: _('Enable or disable all notifications')
         });
         
-        this._settings.bind('show-notifications', notificationsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('show-notifications', notificationsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(notificationsRow);
         
         // Success notifications
@@ -225,7 +220,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             subtitle: _('Show notifications when mounts succeed')
         });
         
-        this._settings.bind('show-success-notifications', successRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('show-success-notifications', successRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(successRow);
         
         // Error notifications
@@ -234,13 +229,13 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             subtitle: _('Show notifications when mounts fail')
         });
         
-        this._settings.bind('show-error-notifications', errorRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('show-error-notifications', errorRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         group.add(errorRow);
         
         page.add(group);
     }
     
-    _addMountSettings(page) {
+    _addMountSettings(page, settings, window) {
         const group = new Adw.PreferencesGroup({
             title: _('Symlink Configuration'),
             description: _('Configure symlink base directory - symlinks work for all mounted locations regardless of auto-mount setting')
@@ -249,11 +244,11 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         // Symlink base directory
         const mountBaseRow = new Adw.EntryRow({
             title: _('Base Symlink Directory'),
-            text: this._settings.get_string('custom-mount-base')
+            text: settings.get_string('custom-mount-base')
         });
         
         mountBaseRow.connect('notify::text', () => {
-            this._settings.set_string('custom-mount-base', mountBaseRow.get_text());
+            settings.set_string('custom-mount-base', mountBaseRow.get_text());
         });
         
         // Add browse button
@@ -264,7 +259,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         });
         
         browseButton.connect('clicked', () => {
-            this._chooseMountDirectory(mountBaseRow);
+            this._chooseMountDirectory(mountBaseRow, window);
         });
         
         mountBaseRow.add_suffix(browseButton);
@@ -287,8 +282,10 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         page.add(group);
     }
     
-    _addBookmarkSettings(page) {
-        if (this._bookmarks.length === 0) {
+    _addBookmarkSettings(page, settings, window) {
+        const bookmarks = this._loadBookmarkSettings(this._loadBookmarks(), settings);
+        
+        if (bookmarks.length === 0) {
             const noBookmarksGroup = new Adw.PreferencesGroup({
                 title: _('No Network Bookmarks Found'),
                 description: _('Add network locations to your file manager bookmarks to configure them here')
@@ -303,7 +300,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             return;
         }
         
-        this._bookmarks.forEach((bookmark, index) => {
+        bookmarks.forEach((bookmark, index) => {
             const group = new Adw.PreferencesGroup({
                 title: bookmark.name,
                 description: bookmark.uri
@@ -317,8 +314,8 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             
             enableRow.set_active(bookmark.enabled);
             enableRow.connect('notify::active', () => {
-                this._bookmarks[index].enabled = enableRow.get_active();
-                this._saveBookmarkSettings();
+                bookmarks[index].enabled = enableRow.get_active();
+                this._saveBookmarkSettings(bookmarks, settings);
             });
             group.add(enableRow);
             
@@ -330,8 +327,8 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             
             symlinkRow.set_active(bookmark.createSymlink);
             symlinkRow.connect('notify::active', () => {
-                this._bookmarks[index].createSymlink = symlinkRow.get_active();
-                this._saveBookmarkSettings();
+                bookmarks[index].createSymlink = symlinkRow.get_active();
+                this._saveBookmarkSettings(bookmarks, settings);
                 // Enable/disable the symlink path row and hint
                 symlinkPathRow.set_sensitive(symlinkRow.get_active());
                 symlinkHintRow.set_sensitive(symlinkRow.get_active());
@@ -347,8 +344,8 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
             symlinkPathRow.set_sensitive(bookmark.createSymlink);
             
             symlinkPathRow.connect('notify::text', () => {
-                this._bookmarks[index].symlinkPath = symlinkPathRow.get_text();
-                this._saveBookmarkSettings();
+                bookmarks[index].symlinkPath = symlinkPathRow.get_text();
+                this._saveBookmarkSettings(bookmarks, settings);
             });
             group.add(symlinkPathRow);
             
@@ -375,10 +372,8 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         });
         
         refreshButton.connect('clicked', () => {
-            this._loadBookmarks();
-            // Refresh the preferences window
-            this._window.close();
-            // The user will need to reopen preferences to see changes
+            // Close and reopen to refresh bookmarks
+            window.close();
         });
         
         refreshRow.add_suffix(refreshButton);
@@ -386,7 +381,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         page.add(refreshGroup);
     }
     
-    _addAdvancedSettings(page) {
+    _addAdvancedSettings(page, settings, window) {
         const retryGroup = new Adw.PreferencesGroup({
             title: _('Retry Settings'),
             description: _('Configure retry behavior for failed mounts')
@@ -401,12 +396,12 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
                 upper: 10,
                 step_increment: 1,
                 page_increment: 1,
-                value: this._settings.get_int('retry-attempts')
+                value: settings.get_int('retry-attempts')
             })
         });
         
         attemptsRow.connect('notify::value', () => {
-            this._settings.set_int('retry-attempts', attemptsRow.get_value());
+            settings.set_int('retry-attempts', attemptsRow.get_value());
         });
         
         retryGroup.add(attemptsRow);
@@ -420,12 +415,12 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
                 upper: 300,
                 step_increment: 5,
                 page_increment: 30,
-                value: this._settings.get_int('retry-delay')
+                value: settings.get_int('retry-delay')
             })
         });
         
         delayRow.connect('notify::value', () => {
-            this._settings.set_int('retry-delay', delayRow.get_value());
+            settings.set_int('retry-delay', delayRow.get_value());
         });
         
         retryGroup.add(delayRow);
@@ -471,7 +466,7 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         });
         
         resetButton.connect('clicked', () => {
-            this._resetSettings();
+            this._resetSettings(settings, window);
         });
         
         resetRow.add_suffix(resetButton);
@@ -479,12 +474,12 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         page.add(debugGroup);
     }
     
-    _chooseMountDirectory(entry) {
+    _chooseMountDirectory(entry, window) {
         const dialog = new Gtk.FileChooserDialog({
             title: _('Choose Symlink Base Directory'),
             action: Gtk.FileChooserAction.SELECT_FOLDER,
             modal: true,
-            transient_for: this._window
+            transient_for: window
         });
         
         dialog.add_button(_('Cancel'), Gtk.ResponseType.CANCEL);
@@ -577,13 +572,13 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         page.add(technicalGroup);
     }
     
-    _resetSettings() {
+    _resetSettings(settings, window) {
         // Create a confirmation dialog
         const dialog = new Adw.MessageDialog({
             heading: _('Reset Settings?'),
             body: _('This will reset all extension settings to their default values. This action cannot be undone.'),
             modal: true,
-            transient_for: this._window
+            transient_for: window
         });
         
         dialog.add_response('cancel', _('Cancel'));
@@ -593,18 +588,18 @@ export default class NetworkShareAutomountPreferences extends ExtensionPreferenc
         dialog.connect('response', (dialog, response) => {
             if (response === 'reset') {
                 // Reset all settings to default
-                this._settings.reset('check-interval');
-                this._settings.reset('show-notifications');
-                this._settings.reset('show-success-notifications');
-                this._settings.reset('show-error-notifications');
-                this._settings.reset('custom-mount-base');
-                this._settings.reset('bookmark-settings');
-                this._settings.reset('retry-attempts');
-                this._settings.reset('retry-delay');
-                this._settings.reset('symlink-mounts');
+                settings.reset('check-interval');
+                settings.reset('show-notifications');
+                settings.reset('show-success-notifications');
+                settings.reset('show-error-notifications');
+                settings.reset('custom-mount-base');
+                settings.reset('bookmark-settings');
+                settings.reset('retry-attempts');
+                settings.reset('retry-delay');
+                settings.reset('symlink-mounts');
                 
                 // Close preferences window to force refresh
-                this._window.close();
+                window.close();
             }
             dialog.destroy();
         });
